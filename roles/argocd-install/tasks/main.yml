@@ -1,0 +1,54 @@
+---
+- name: Create argocd namespace
+  kubernetes.core.k8s:
+    name: argocd
+    api_version: v1
+    kind: Namespace
+    state: present
+    kubeconfig: /home/ubuntu/.kube/config
+
+- name: Install ArgoCD
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: argocd-install
+        namespace: argocd
+    kubeconfig: /home/ubuntu/.kube/config
+
+- name: Apply ArgoCD manifests
+  shell: |
+    kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/{{ argocd_version }}/manifests/install.yaml
+  environment:
+    KUBECONFIG: /home/ubuntu/.kube/config
+
+- name: Wait for ArgoCD server
+  kubernetes.core.k8s_info:
+    api_version: apps/v1
+    kind: Deployment
+    name: argocd-server
+    namespace: argocd
+    wait_condition:
+      type: Available
+      status: "True"
+    wait_timeout: 600
+    kubeconfig: /home/ubuntu/.kube/config
+
+- name: Patch ArgoCD server service
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Service
+      metadata:
+        name: argocd-server
+        namespace: argocd
+      spec:
+        type: NodePort
+        ports:
+        - port: 80
+          nodePort: 30080
+          targetPort: 8080
+    kubeconfig: /home/ubuntu/.kube/config

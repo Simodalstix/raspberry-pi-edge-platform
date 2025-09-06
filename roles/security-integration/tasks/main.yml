@@ -1,0 +1,31 @@
+---
+- name: Install curl for Vault integration
+  apt:
+    name: curl
+    state: present
+
+- name: Create vault config directory
+  file:
+    path: /etc/vault
+    state: directory
+    mode: '0755'
+
+- name: Configure Vault agent
+  template:
+    src: vault-agent.hcl.j2
+    dest: /etc/vault/agent.hcl
+    mode: '0644'
+
+- name: Create systemd service for Vault agent
+  template:
+    src: vault-agent.service.j2
+    dest: /etc/systemd/system/vault-agent.service
+    mode: '0644'
+  notify: restart vault-agent
+
+- name: Enable and start Vault agent
+  systemd:
+    name: vault-agent
+    enabled: yes
+    state: started
+    daemon_reload: yes

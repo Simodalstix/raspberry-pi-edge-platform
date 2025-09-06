@@ -1,0 +1,31 @@
+---
+- name: Pi Infrastructure Validation
+  hosts: raspberry_pi
+  become: yes
+  tasks:
+    - name: Check SD card space
+      shell: df -h / | awk 'NR==2 {print $4}'
+      register: disk_space
+      failed_when: disk_space.stdout | regex_replace('G','') | int < 20
+
+    - name: Verify USB storage exists
+      stat:
+        path: "{{ usb_device }}"
+      register: usb_check
+      failed_when: not usb_check.stat.exists
+
+    - name: Test lab network connectivity
+      wait_for:
+        host: "{{ vault_addr.split('://')[1].split(':')[0] }}"
+        port: 8200
+        timeout: 10
+
+    - name: Validate ARM64 architecture
+      command: uname -m
+      register: arch
+      failed_when: arch.stdout != "aarch64"
+
+    - name: Check memory requirements
+      shell: free -g | awk 'NR==2{print $2}'
+      register: memory
+      failed_when: memory.stdout | int < 7

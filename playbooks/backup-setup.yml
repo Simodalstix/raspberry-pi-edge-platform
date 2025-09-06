@@ -1,0 +1,20 @@
+---
+- name: Configure Distributed Backup Services
+  hosts: raspberry_pi
+  become: yes
+  roles:
+    - backup-services
+
+  post_tasks:
+    - name: Test backup connectivity
+      shell: ssh -o ConnectTimeout=10 ubuntu@{{ elk_host }} "echo 'Backup target reachable'"
+      become_user: ubuntu
+      register: backup_test
+      failed_when: backup_test.rc != 0
+
+    - name: Display backup status
+      debug:
+        msg: |
+          Backup configured to: {{ elk_host }}:/backup/edge-pi
+          Daily backup at 2:00 AM
+          Retention: {{ backup_retention_days }} days

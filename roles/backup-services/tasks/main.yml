@@ -1,0 +1,31 @@
+---
+- name: Install borgbackup
+  apt:
+    name: borgbackup
+    state: present
+
+- name: Create backup directory
+  file:
+    path: /opt/backup
+    state: directory
+    mode: '0700'
+
+- name: Create backup script
+  template:
+    src: backup-script.sh.j2
+    dest: /opt/backup/backup-script.sh
+    mode: '0755'
+
+- name: Setup backup cron
+  cron:
+    name: "Daily backup to lab"
+    minute: "0"
+    hour: "2"
+    job: "/opt/backup/backup-script.sh"
+    user: root
+
+- name: Create backup config
+  template:
+    src: backup-config.yml.j2
+    dest: /opt/backup/config.yml
+    mode: '0600'

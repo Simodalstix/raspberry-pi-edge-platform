@@ -1,0 +1,49 @@
+---
+- name: Mount USB storage
+  mount:
+    path: "{{ usb_mount }}"
+    src: "{{ usb_device }}"
+    fstype: ext4
+    state: mounted
+
+- name: Create prometheus storage directory
+  file:
+    path: "{{ prometheus_storage }}"
+    state: directory
+    owner: nobody
+    group: nogroup
+
+- name: Download K3s installer
+  get_url:
+    url: https://get.k3s.io
+    dest: /tmp/k3s-install.sh
+    mode: '0755'
+
+- name: Install K3s
+  shell: |
+    INSTALL_K3S_VERSION={{ k3s_version }} \
+    K3S_KUBECONFIG_MODE="644" \
+    /tmp/k3s-install.sh --disable traefik
+  creates: /usr/local/bin/k3s
+
+- name: Wait for K3s to be ready
+  wait_for:
+    port: 6443
+    host: localhost
+    timeout: 300
+
+- name: Copy kubeconfig
+  copy:
+    src: /etc/rancher/k3s/k3s.yaml
+    dest: /home/ubuntu/.kube/config
+    remote_src: yes
+    owner: ubuntu
+    group: ubuntu
+    mode: '0600'
+
+- name: Create .kube directory
+  file:
+    path: /home/ubuntu/.kube
+    state: directory
+    owner: ubuntu
+    group: ubuntu

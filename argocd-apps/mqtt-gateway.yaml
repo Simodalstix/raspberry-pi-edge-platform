@@ -1,0 +1,59 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: mqtt-gateway
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/your-org/iot-manifests
+    path: mqtt-gateway
+    targetRevision: HEAD
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: iot
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mosquitto-config
+  namespace: iot
+data:
+  mosquitto.conf: |
+    listener 1883
+    allow_anonymous true
+    log_dest stdout
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mosquitto
+  namespace: iot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mosquitto
+  template:
+    metadata:
+      labels:
+        app: mosquitto
+    spec:
+      containers:
+      - name: mosquitto
+        image: eclipse-mosquitto:2.0-openssl
+        ports:
+        - containerPort: 1883
+        volumeMounts:
+        - name: config
+          mountPath: /mosquitto/config
+      volumes:
+      - name: config
+        configMap:
+          name: mosquitto-config

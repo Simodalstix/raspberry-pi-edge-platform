@@ -1,0 +1,15 @@
+---
+- name: Bootstrap Raspberry Pi Edge Platform
+  hosts: raspberry_pi
+  become: yes
+  roles:
+    - k3s-bootstrap
+    - argocd-install
+    - security-integration
+
+  post_tasks:
+    - name: Display ArgoCD access info
+      debug:
+        msg: |
+          ArgoCD UI: http://{{ pi_ip }}:30080
+          Initial password: kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d

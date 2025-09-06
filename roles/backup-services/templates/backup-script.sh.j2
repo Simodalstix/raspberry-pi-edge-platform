@@ -1,0 +1,12 @@
+#!/bin/bash
+export BORG_REPO="ubuntu@{{ elk_host }}:/backup/edge-pi"
+export BORG_PASSPHRASE="{{ vault_backup_key | default('changeme') }}"
+
+borg create --stats --compression lz4 \
+    $BORG_REPO::'{hostname}-{now}' \
+    /etc/rancher/k3s \
+    /home/ubuntu/.kube \
+    {{ prometheus_storage }} \
+    /opt/backup/config.yml
+
+borg prune --keep-daily={{ backup_retention_days }} $BORG_REPO
